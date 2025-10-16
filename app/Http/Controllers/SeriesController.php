@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SeriesFormRequest;
+use App\Models\Episode;
+use App\Models\Season;
 use App\Models\Serie;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -24,11 +27,32 @@ class SeriesController extends Controller
         return view('series.create');
     }
 
-    public function store(Request $request)
+    public function store(SeriesFormRequest $request)
     {
         $serie = Serie::create($request->all());
 
-        $request->session()->flash('msgSuccess', "Serie '{$serie->name}' criada com sucesso!");
+        $seasons = [];
+        for ($i = 1; $i <= $request->seasonQty; $i++) {
+            $seasons[] = [
+                'series_id' => $serie->id,
+                'number' => $i
+            ];
+
+            Season::insert($seasons);
+        }
+
+        $episodes = [];
+
+        foreach($serie->seasons as $season) {
+            for ($j = 1; $j <= $request->episodesPerSeason; $j++) {
+                $episodes[] = [
+                    'season_id' => $season->id,
+                    'number' => $j
+                ];
+            }
+        }
+
+        Episode::insert($episodes);
 
         return to_route('series.index')
             ->with('msgSuccess', "Serie '{$serie->name}' removida com sucesso!");
@@ -47,7 +71,7 @@ class SeriesController extends Controller
         return view('series.edit')->with('series', $series);
     }
 
-    public function update(Serie $series, Request $request)
+    public function update(Serie $series, SeriesFormRequest $request)
     {
         $series->update($request->all());
 
